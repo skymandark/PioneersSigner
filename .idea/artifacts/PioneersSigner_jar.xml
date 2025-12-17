@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact name="PioneersSigner:jar">
+    <output-path>D:/signer</output-path>
+    <root id="root">
+      <element id="archive" name="PioneersSigner.jar">
+        <element id="directory" name="META-INF">
+          <element id="file-copy" path="D:/signer/META-INF/MANIFEST.MF" />
+        </element>
+        <element id="module-output" name="PioneersSigner" />
+      </element>
+      <element id="library" level="project" name="PioneersSigner" />
+    </root>
+  </artifact>
+</component>
