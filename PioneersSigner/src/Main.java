@@ -173,17 +173,5 @@ public class Main {
         os.close();
     }
 
-    // Very simple extraction (not full JSON parser)
-    private static String extract(String json, String field) {
-        try {
-            int pos = json.indexOf(field);
-            if (pos == -1) return "";
-            int start = json.indexOf(":", pos) + 1;
-            int end = json.indexOf(",", start);
-            if (end == -1) end = json.indexOf("}", start);
-            return json.substring(start, end).replace("\"", "").trim();
-        } catch (Exception e) {
-            return "";
-        }
-    }
+    // Very simple extraction helper was unused; removed to keep class clean.
 }

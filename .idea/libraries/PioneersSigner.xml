@@ -8,6 +8,8 @@
       <root url="jar://$PROJECT_DIR$/PioneersSigner/jackson-databind-2.20.0-rc1.jar!/" />
       <root url="jar://$PROJECT_DIR$/PioneersSigner/jackson-annotations-3.0-rc5.jar!/" />
       <root url="jar://D:/PTK/ProtectToolkit 7/Runtime/bin/jcprov.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../New folder/gson-2.11.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../New folder/guava-33.1.0-jre.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

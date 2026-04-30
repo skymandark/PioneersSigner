@@ -3,6 +3,8 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayInputStream;
@@ -26,7 +28,6 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DERNull;
-import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.cms.Attribute;
 import org.bouncycastle.asn1.cms.AttributeTable;
@@ -39,7 +40,6 @@ import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
-import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
@@ -55,6 +55,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.DigestCalculatorProvider;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+import org.bouncycastle.util.Selector;
 import org.bouncycastle.util.Store;
 import safenet.jcprov.CK_ATTRIBUTE;
 import safenet.jcprov.CK_C_INITIALIZE_ARGS;
@@ -317,8 +318,10 @@ public class CadesBesSigner {
                 System.out.println("✓ Message digest matches successfully!");
             }
 
-            Store certStore = signedData.getCertificates();
-            Collection<X509CertificateHolder> certMatches = certStore.getMatches(signer.getSID());
+            Store<X509CertificateHolder> certStore = signedData.getCertificates();
+            @SuppressWarnings("unchecked")
+            Collection<X509CertificateHolder> certMatches =
+                    certStore.getMatches((Selector<X509CertificateHolder>) signer.getSID());
             if (certMatches.isEmpty()) {
                 System.err.println(" ERROR: No certificate found for signer");
                 return false;
@@ -389,13 +392,14 @@ public class CadesBesSigner {
     // JsonSerializer: serializes document exactly as sent then canonicalizes
     // -----------------------------------------------------------------------
     public static class JsonSerializer {
-        private final String originalJsonText;
         private final ObjectMapper mapper;
         private final ObjectNode originalDocumentNode;
 
         public JsonSerializer(String jsonInput) throws Exception {
-            this.originalJsonText = jsonInput;
             this.mapper = new ObjectMapper();
+            // احتفظ بالقيمة الرقمية كما أرسلتها (BigDecimal) واطبعها بدون Scientific notation
+            this.mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+            this.mapper.enable(SerializationFeature.WRITE_BIGDECIMAL_AS_PLAIN);
             JsonNode root = mapper.readTree(jsonInput);
             if (!root.isObject()) {
                 throw new IllegalArgumentException("Root must be a JSON object representing the document");
@@ -459,7 +463,7 @@ public class CadesBesSigner {
                 JsonToken t = p.nextToken();
                 if (t == JsonToken.END_OBJECT) return;
                 if (t != JsonToken.FIELD_NAME) throw new IOException("Expected FIELD_NAME but got: " + t);
-                String name = p.getCurrentName();
+                String name = p.currentName();
                 String nameUpper = name.toUpperCase(Locale.ROOT);
                 sb.append("\"").append(nameUpper).append("\"");
                 JsonToken valTok = p.nextToken();
@@ -496,9 +500,6 @@ public class CadesBesSigner {
     // AHSMHandeler: HSM connection and key/certificate management
     // -----------------------------------------------------------------------
     public static class AHSMHandeler {
-        private CK_SESSION_HANDLE session;
-        private CK_OBJECT_HANDLE privateKey;
-        private X509Certificate certificate;
         private CK_OBJECT_HANDLE privateKeyHandle = null;
         private final CK_SESSION_HANDLE sessionHandle = new CK_SESSION_HANDLE();
         private X509Certificate cert = null;
@@ -558,7 +559,8 @@ public class CadesBesSigner {
                 byte[] certBytes = (byte[])certValueTemplate[0].pValue;
                 CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
                 this.cert = (X509Certificate)certFactory.generateCertificate(new ByteArrayInputStream(certBytes));
-                System.out.println("✓ Certificate loaded: " + String.valueOf(this.cert.getSubjectDN()));
+                // Use getSubjectX500Principal instead of deprecated getSubjectDN
+                System.out.println("✓ Certificate loaded: " + this.cert.getSubjectX500Principal().getName());
             }
         }
 
